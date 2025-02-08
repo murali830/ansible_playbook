@@ -1,0 +1,119 @@
+---
+- name: configuring single disk  with multiple file system
+  hosts: clients
+  become: yes
+  tasks:
+
+
+     - name: ensure disk has gpt label
+       parted:
+          device: /dev/sdb
+          label: gpt
+          state: present
+          part_type: primary
+          number: 1
+          part_start: 1MiB
+          part_end: 100%
+
+     - name: Create a physical volume
+       lvg:
+        vg: java_vg
+        pvs: /dev/sdb1
+
+     - name: Create logical volume java_lv1
+       lvol:
+        vg: java_vg
+        lv: java_lv1
+        size: 2G
+
+     - name: Create logical volume java_lv2
+       lvol:
+        vg: java_vg
+        lv: java_lv2
+        size: 2G
+
+     - name: Create logical volume java_lv3
+       lvol:
+        vg: java_vg
+        lv: java_lv3
+        size: 1G
+
+     - name: java_lv1 with ext4 file system
+       filesystem:
+        dev: /dev/java_vg/java_lv1
+        fstype: ext4
+
+     - name: java_lv2 with xfs file system
+       filesystem:
+        dev: /dev/java_vg/java_lv2
+        fstype: xfs
+
+     - name: java_lv3 with ext4 file system
+       filesystem:
+        dev: /dev/java_vg/java_lv3
+        fstype: ext4
+
+     - name: Create mount point for java_lv1
+       file:
+        path: /java1
+        state: directory
+
+     - name: Create mount point for java_lv2
+       file:
+        path: /java2
+        state: directory
+
+     - name: Create mount point for java_lv3
+       file:
+        path: /java3
+        state: directory
+
+     - name: Mount java_lv1
+       mount:
+        path: /java1
+        src: /dev/java_vg/java_lv1
+        fstype: ext4
+        state: mounted
+
+     - name: Mount lv2
+       mount:
+        path: /java2
+        src: /dev/java_vg/java_lv2
+        fstype: xfs
+        state: mounted
+
+     - name: Mount lv3
+       mount:
+        path: /java3
+        src: /dev/java_vg/java_lv3
+        fstype: ext4
+        state: mounted
+
+     - name: Backup /etc/fstab with date and time
+       copy:
+          src: /etc/fstab
+          dest: /etc/fstab.backup_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}
+          backup: no
+       register: fstab_backup
+
+
+     - name: Ensure lv1 is persistent in /etc/fstab
+       mount:
+        path: /java1
+        src: /dev/java_vg/java_lv1
+        fstype: ext4
+        state: present
+
+     - name: Ensure lv2 is persistent in /etc/fstab
+       mount:
+        path: /java2
+        src: /dev/java_vg/java_lv2
+        fstype: xfs
+        state: present
+
+     - name: Ensure lv3 is persistent in /etc/fstab
+       mount:
+        path: /java3
+        src: /dev/java_vg/java_lv3
+        fstype: ext4
+        state: present
