@@ -1,0 +1,62 @@
+---
+- name: removing  single disk  with multiple file system
+  hosts: clients
+  become: yes
+  tasks:
+
+     - name: Unmount a mounted volume
+       ansible.posix.mount:
+        path: /java1
+        state: unmounted
+
+     - name: Unmount a mounted volume
+       ansible.posix.mount:
+        path: /java2
+        state: unmounted
+
+     - name: Unmount a mounted volume
+       ansible.posix.mount:
+        path: /java3
+        state: unmounted
+
+     - name: Remove the LVM mount path entry from /etc/fstab
+       ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: "^/dev/java_vg/java_lv*"
+        state: absent
+
+     - name: Remove the logical volume1
+       community.general.lvol:
+        vg: java_vg
+        lv: java_lv1
+        state: absent
+        force: yes
+     - name: Remove the logical volume2
+       community.general.lvol:
+        vg: java_vg
+        lv: java_lv2
+        state: absent
+        force: yes
+     - name: Remove the logical volume3
+       community.general.lvol:
+         vg: java_vg
+         lv: java_lv3
+         state: absent
+         force: yes
+     - name: Remove the volume group
+       community.general.lvg:
+        vg: java_vg
+        state: absent
+        force: yes
+
+     - name: Remove the physical volume
+       community.general.lvg:
+        vg: java_vg
+        pvs: /dev/sdb1
+        state: absent
+
+     - name: Remove partition number 1
+       community.general.parted:
+        device: /dev/sdb
+        number: 1
+        state: absent
