@@ -1,0 +1,93 @@
+---
+- name: Configuring 3 Disks with Single File System
+  hosts: clients
+  become: yes
+  tasks:
+
+    - name: ensure disk has gpt label
+      parted:
+          device: /dev/sdc
+          label: gpt
+          state: present
+          part_type: primary
+          number: 1
+          part_start: 1MiB
+          part_end: 100%
+
+    - name: ensure disk has gpt label
+      parted:
+          device: /dev/sdd
+          label: gpt
+          state: present
+          part_type: primary
+          number: 1
+          part_start: 1MiB
+          part_end: 100%
+
+    - name: ensure disk has gpt label
+      parted:
+          device: /dev/sde
+          label: gpt
+          state: present
+          part_type: primary
+          number: 1
+          part_start: 1MiB
+          part_end: 100%
+
+    - name: Create a physical volume
+      lvg:
+        vg: web_vg
+        pvs: /dev/sdc1
+
+    - name: Create a physical volume
+      lvg:
+        vg: web_vg
+        pvs: /dev/sdd1
+
+    - name: Create a physical volume
+      lvg:
+        vg: web_vg
+        pvs: /dev/sde1
+
+    - name: Create logical volume
+      lvol:
+        vg: web_vg
+        lv: web_lv
+        size: 100%FREE
+
+    - name: Unmount the Logical Volume if it is mounted
+      ansible.builtin.mount:
+         path: /web
+         state: unmounted
+
+
+    - name: web_lv with ext4 file system
+      filesystem:
+        dev: /dev/web_vg/web_lv
+        fstype: ext4
+
+    - name: Create mount point for web_lv
+      file:
+        path: /web
+        state: directory
+
+    - name: Mount for web_lv
+      mount:
+        path: /web
+        src: /dev/web_vg/web_lv
+        fstype: ext4
+        state: mounted
+
+    - name: Backup /etc/fstab with date and time
+      copy:
+          src: /etc/fstab
+          dest: /etc/fstab.backup_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}
+          backup: no
+      register: fstab_backup
+
+    - name: Ensure web_lv is persistent in /etc/fstab
+      mount:
+        path: /web
+        src: /dev/web_vg/web_lv
+        fstype: ext4
+        state: present
