@@ -1,0 +1,68 @@
+---
+- name: configuring single disk  with single file system
+  hosts: clients
+  become: yes
+  tasks:
+      - name: ensure disk has gpt label
+        parted:
+          device: /dev/sda
+          label: gpt
+          state: present
+          part_type: primary
+          number: 1
+          part_start: 1MiB
+          part_end: 100%
+
+      - name: Create a physical volume and vg
+        lvg:
+         vg: oracle_vg
+         pvs: /dev/sda1
+
+      - name: Create a logical volume
+        lvol:
+         vg: oracle_vg
+         lv: oracle_lv
+         size: 100%FREE
+
+      - name: adding file system
+        filesystem:
+         fstype: ext4
+         dev: /dev/oracle_vg/oracle_lv
+
+
+      - name: Create the directory for the mount point
+        file:
+         path: /oracle
+         state: directory
+         mode: '755'
+         owner: root
+         group: root
+
+      - name: Mount the filesystem
+        mount:
+         path: /oracle
+         src: /dev/oracle_vg/oracle_lv
+         fstype: ext4
+         state: mounted
+
+      - name: Ensure mount persists after reboot
+        mount:
+         path: /oracle
+         src: /dev/oracle_vg/oracle_lv
+         fstype: ext4
+         state: present
+
+      - name: Backup /etc/fstab with date and time
+        copy:
+          src: /etc/fstab
+          dest: /etc/fstab.backup_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}
+          backup: no
+        register: fstab_backup
+
+      - name: Ensure the LVM logical volume is mounted and persists in /etc/fstab
+        mount:
+         path: /oracle
+         src: /dev/oracle_vg/oracle_lv
+         fstype: ext4
+         opts: defaults
+         state: present
