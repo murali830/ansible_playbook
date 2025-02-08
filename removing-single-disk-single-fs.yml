@@ -1,0 +1,41 @@
+---
+- name: destroying single disk  with single file system
+  hosts: clients
+  become: yes
+  tasks:
+
+    - name: Unmount a mounted volume
+      ansible.posix.mount:
+        path: /oracle
+        state: unmounted
+
+    - name: Remove the LVM mount path entry from /etc/fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: "^/dev/oracle_vg/oracle_lv"
+        state: absent
+
+
+    - name: Remove the logical volume
+      community.general.lvol:
+        vg: oralce_vg
+        lv: oracle_lv
+        state: absent
+
+    - name: Remove the volume group
+      community.general.lvg:
+        vg: oracle_vg
+        state: absent
+        force: yes
+
+    - name: Remove the physical volume
+      community.general.lvg:
+        vg: oracle_vg
+        pvs: /dev/sda1
+        state: absent
+
+    - name: Remove partition number 1
+      community.general.parted:
+        device: /dev/sda
+        number: 1
+        state: absent
