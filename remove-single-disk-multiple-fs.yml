@@ -24,6 +24,20 @@
         path: /etc/fstab
         regexp: "^/dev/java_vg/java_lv*"
         state: absent
+     - name: Delete the mount point directory
+       ansible.builtin.file:
+        path: /java1
+        state: absent
+
+     - name: Delete the mount point directory
+       ansible.builtin.file:
+        path: /java2
+        state: absent
+
+     - name: Delete the mount point directory
+       ansible.builtin.file:
+        path: /java3
+        state: absent
 
      - name: Remove the logical volume1
        community.general.lvol:
