@@ -1,0 +1,49 @@
+---
+- name: Configuring 3 Disks with Single File System
+  hosts: clients
+  become: yes
+  tasks:
+
+    - name: Take backup of /etc/fstab
+      shell: cp /etc/fstab /etc/fstab-$(date +%F-%H%M%S)
+
+    - name: Create partition on /dev/sdc
+      command: parted /dev/sdc mklabel gpt mkpart primary ext4 1MiB 100%
+
+    - name: Create partition on /dev/sdd
+      command: parted /dev/sdd mklabel gpt mkpart primary ext4 1MiB 100%
+
+    - name: Create partition on /dev/sde
+      command: parted /dev/sde mklabel gpt mkpart primary ext4 1MiB 100%
+
+    - name: Create Physical Volume on /dev/sdc1
+      command: pvcreate /dev/sdc1
+
+    - name: Create Physical Volume on /dev/sdd1
+      command: pvcreate /dev/sdd1
+
+    - name: Create Physical Volume on /dev/sde1
+      command: pvcreate /dev/sde1
+
+    - name: Create Volume Group with space for future expansion
+      command: vgcreate web_vg /dev/sdc1 /dev/sdd1 /dev/sde1
+
+    - name: Create Logical Volume with 4GB (keeping free space for future expansion)
+      command: lvcreate -l 100%FREE -n web_lv web_vg
+
+    - name: Format the Logical Volume
+      command: mkfs -t ext4 /dev/web_vg/web_lv
+
+    - name: Create mount point
+      file:
+        path: /web
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Mount Logical Volume
+      command: mount /dev/web_vg/web_lv /web
+
+    - name: Add to fstab for persistence
+      shell: echo "/dev/web_vg/web_lv /web ext4 defaults 0 0" >> /etc/fstab
