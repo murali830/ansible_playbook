@@ -1,0 +1,70 @@
+---
+- name: removing  multiple disk with single file system
+  hosts: clients
+  become: yes
+  tasks:
+
+     - name: Unmount a mounted volume
+       ansible.posix.mount:
+        path: /web
+        state: unmounted
+
+     - name: Remove the LVM mount path entry from /etc/fstab
+       ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: "^/dev/web_vg/web_lv*"
+        state: absent
+
+     - name: Delete the mount point directory
+       ansible.builtin.file:
+        path: /web
+        state: absent
+
+     - name: Remove the logical volume1
+       community.general.lvol:
+        vg: web_vg
+        lv: web_lv
+        state: absent
+        force: yes
+
+     - name: Remove the volume group
+       community.general.lvg:
+        vg: web_vg
+        state: absent
+        force: yes
+
+     - name: Remove the physical volume
+       community.general.lvg:
+        vg: web_vg
+        pvs: /dev/sdc1
+        state: absent
+
+     - name: Remove the physical volume
+       community.general.lvg:
+        vg: web_vg
+        pvs: /dev/sdd1
+        state: absent
+
+     - name: Remove the physical volume
+       community.general.lvg:
+        vg: web_vg
+        pvs: /dev/sde1
+        state: absent
+
+     - name: Remove partition number 1
+       community.general.parted:
+        device: /dev/sdc
+        number: 1
+        state: absent
+
+     - name: Remove partition number 1
+       community.general.parted:
+        device: /dev/sdd
+        number: 1
+        state: absent
+
+     - name: Remove partition number 1
+       community.general.parted:
+        device: /dev/sde
+        number: 1
+        state: absent
