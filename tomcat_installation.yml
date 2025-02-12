@@ -27,7 +27,7 @@
              state: directory
         - name: Rename extracted Tomcat directory
           copy:
-             src: /opt/apache-tomcat-9.0.98
+             src: /opt/apache-tomcat-9.0.98/
              dest: /opt/tomcat9
              remote_src: yes
         - name: Create Tomcat group
