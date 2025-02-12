@@ -1,0 +1,110 @@
+---
+- name: installing tomcat service
+  hosts: clients
+  become: yes
+  tasks:
+        - name: installing java
+          package:
+             name: java-11-openjdk
+             state: present
+        - name: Install prerequisites
+          package:
+           name:  wget
+           state: present
+        - name: installing tomcat service
+          get_url:
+             url:  https://downloads.apache.org/tomcat/tomcat-9/v9.0.98/bin/apache-tomcat-9.0.98.tar.gz
+             dest: /opt
+             force: yes
+        - name: Extract Tomcat archive to the installation directory
+          unarchive:
+           src: /opt/apache-tomcat-9.0.98.tar.gz
+           dest: /opt
+           remote_src: yes
+        - name: create directory
+          file:
+             path: /opt/tomcat9
+             state: directory
+        - name: Rename extracted Tomcat directory
+          copy:
+             src: /opt/apache-tomcat-9.0.98
+             dest: /opt/tomcat9
+             remote_src: yes
+        - name: Create Tomcat group
+          group:
+             name: tomcat
+             state: present
+        - name: Create Tomcat user
+          user:
+           name: tomcat
+           group: tomcat
+           home: /usr/share/tomcat
+           shell: /sbin/nologin
+           state: present
+        - name: Set ownership of Tomcat directory
+          file:
+           path: /opt/tomcat9
+           owner: tomcat
+           group: tomcat
+           mode: "0755"
+           recurse: yes
+        - name: Ensure the tomcat.service file exists
+          file:
+             path: /usr/lib/systemd/system/tomcat.service
+             state: touch
+             mode: '0644'
+        - name: Insert content into the file
+          blockinfile:
+           path: /usr/lib/systemd/system/tomcat.service
+           block: |
+              [Unit]
+              Description=Apache Tomcat 9
+              After=network.target
+              [Service]
+              User=tomcat
+              Group=tomcat
+              Type=forking
+              Environment="JAVA_HOME=/usr/lib/jvm/jre"
+              Environment="CATALINA_HOME=/opt/tomcat9"
+              Environment="CATALINA_BASE=/opt/tomcat9"
+              Environment="CATALINA_PID=/opt/tomcat9/temp/tomcat.pid"
+              ExecStart=/opt/tomcat9/bin/startup.sh
+              ExecStop=/opt/tomcat9/bin/shutdown.sh
+              Restart=on-failure
+              [Install]
+              WantedBy=multi-user.target
+        - name: Ensure the tomcat.service file exists
+          file:
+             path: /etc/systemd/system/tomcat.service
+             state: touch
+             mode: '0644'
+        - name: Insert content into the file
+          blockinfile:
+           path: /etc/systemd/system/tomcat.service
+           block: |
+              [Unit]
+              Description=Apache Tomcat 9
+              After=network.target
+
+              [Service]
+              User=tomcat
+              Group=tomcat
+              Type=forking
+
+              Environment="JAVA_HOME=/usr/lib/jvm/jre"
+              Environment="CATALINA_HOME=/opt/tomcat9"
+              Environment="CATALINA_BASE=/opt/tomcat9"
+              Environment="CATALINA_PID=/opt/tomcat9/temp/tomcat.pid"
+              ExecStart=/opt/tomcat9/bin/startup.sh
+              ExecStop=/opt/tomcat9/bin/shutdown.sh
+              Restart=on-failure
+
+              [Install]
+              WantedBy=multi-user.target
+        - name: Reload systemd daemon
+          command: systemctl daemon-reload
+
+        - name: Start Tomcat service
+          service:
+            name: tomcat
+            state: started
