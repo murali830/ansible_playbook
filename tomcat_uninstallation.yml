@@ -1,0 +1,48 @@
+---
+- name: uninstalling tomcat service
+  hosts: clients
+  become: yes
+  tasks:
+       - name: stop Tomcat service
+         systemd:
+          name: tomcat
+          state: stopped
+          enabled: no
+       - name: Remove the Tomcat service file
+         file:
+          path: /etc/systemd/system/tomcat.service
+          state: absent
+       - name: Remove the Tomcat service file
+         file:
+          path: /usr/lib/systemd/system/tomcat.service
+          state: absent
+       - name: Reload systemd daemon
+         command: systemctl daemon-reload
+       - name: Remove the user
+         user:
+           name: tomcat
+           state: absent
+           remove: yes
+       - name: Remove the group
+         group:
+          name: tomcat
+          state: absent
+       - name: Remove tomcat9 directory
+         file:
+          path: /opt/tomcat9
+          state: absent
+          force: yes
+       - name: Remove extracted tomcat directory
+         file:
+          path: /opt/apache-tomcat-9.0.98
+          state: absent
+          force: yes
+       - name: Remove tar tomcat directory
+         file:
+          path: /opt/apache-tomcat-9.0.98.tar.gz
+          state: absent
+          force: yes
+       - name: uninstalling java
+         package:
+           name: java-11-openjdk
+           state: absent
